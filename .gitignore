@@ -1,0 +1,11 @@
+genai_game/
+models/
+*.safetensors
+*.ckpt
+*.pth
+ComfyUI/output/
+ComfyUI/temp/
+*.log
+venv/
+__pycache__/
+.DS_Store

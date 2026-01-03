@@ -1,0 +1,23 @@
+[
+  {
+    "scene_id": 1,
+    "description": "CyberHero faces off against a giant robot",
+    "visual_prompt": "A dark and rainy cityscape at night, with neon lights reflecting off the wet pavement, as CyberHero stands tall in a powerful pose, wearing a sleek black and silver costume, with a giant robot looming in the background, its metal body glowing with red eyes, amidst the sound of thunder and pouring rain",
+    "camera": "Low-angle shot",
+    "action": "CyberHero charges at the robot"
+  },
+  {
+    "scene_id": 2,
+    "description": "CyberHero dodges the robot's attack",
+    "visual_prompt": "A close-up of CyberHero's face, with raindrops falling on their mask, as they dodge to the side, avoiding the giant robot's massive metal fist, which crashes into the ground, sending shockwaves through the wet pavement, with the sound of screeching metal and exploding concrete, as the robot's red eyes glow brighter with anger, in the background, amidst the dark and rainy cityscape, with the CyberHero logo visible on their chest",
+    "camera": "Over-the-shoulder shot",
+    "action": "CyberHero leaps into the air, landing a kick on the robot's chest"
+  },
+  {
+    "scene_id": 3,
+    "description": "CyberHero delivers a finishing blow",
+    "visual_prompt": "A wide shot of the cityscape, with the giant robot stumbling backwards, as CyberHero stands victorious, with their arms crossed, and a confident smile on their face, as lightning illuminates the dark sky, and the rain slows to a drizzle, with the sound of cheering crowds in the distance, as the robot collapses to the ground, defeated, with the CyberHero standing over it, amidst the ruins of the city, with the words 'CyberHero saves the day' written in bold, neon letters across the sky",
+    "camera": "Bird's-eye view",
+    "action": "CyberHero strikes a pose, as the city begins to rebuild"
+  }
+]
