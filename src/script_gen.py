@@ -4,7 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 # --- CONFIG ---
 # Direct string assignment is safer for your current setup
-GROQ_KEY = "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"
+
 # Using a widely available stable model
 MODEL = "llama-3.3-70b-versatile" 
 
@@ -55,4 +55,5 @@ if __name__ == "__main__":
         path = save_script(script)
         print(f"✅ Success! Script saved to: {path}")
     except Exception as e:
+
         print(f"💥 Failed: {e}")
