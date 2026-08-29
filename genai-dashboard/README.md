@@ -5,7 +5,7 @@
 ### 1. Backend Setup (Python FastAPI)
 
 ```bash
-# Install dependencies (includes torch/diffusers for IP-Adapter character images)
+# Install dependencies (lightweight - no local torch/diffusers needed)
 pip install -r backend/requirements.txt
 
 # Add your API keys
@@ -19,9 +19,8 @@ python server.py
 
 Backend runs on: `http://localhost:8000`
 
-Note: the first request that generates a scene image will download the base
-Stable Diffusion model (~4GB) and the IP-Adapter weights from Hugging Face —
-this only happens once and needs an internet connection.
+Note: video generation runs on a free Hugging Face Space (LTX-Video) - no
+local GPU/RAM needed. See "How It Works" below.
 
 ### 2. Frontend Setup (Next.js)
 
@@ -42,7 +41,7 @@ Frontend runs on: `http://localhost:3000`
 ```
 genai-dashboard/
 ├── backend/
-│   └── server.py          # FastAPI backend (Groq + Wan2.1)
+│   └── server.py          # FastAPI backend (Groq + LTX-Video)
 ├── app/
 │   ├── (routes)/
 │   │   ├── genesis/        # Initial prompt input page
@@ -63,14 +62,17 @@ genai-dashboard/
 2. **Backend initializes** → Saves state, ready for choices
 3. **User picks choice (A/B/C/D/Custom)** → `/loop` page
 4. **Backend generates script** → Groq API creates 3-scene story
-5. **Backend generates a character-consistent scene image** → IP-Adapter (Stable
-   Diffusion + `ref_images/characters/CyberHero/CyberHero_1.png` as reference,
-   no LoRA training/ComfyUI needed)
-6. **Backend generates video** → Wan 2.1 tries image-to-video from that image,
-   falling back to text-to-video if the Space doesn't support it
-7. **Backend generates options** → Groq API creates next 4 choices
+5. **Backend generates video** → calls the LTX-Video Space (free, synchronous)
+   with `ref_images/characters/CyberHero/CyberHero_1.png` as the first frame
+   (image-to-video), keeping the character visually consistent with zero
+   LoRA training or a local GPU; falls back to text-to-video if that call
+   fails or the reference image is missing
+6. **Backend generates options** → Groq API creates next 4 choices
 7. **Frontend displays** → Video plays, options shown
 8. **Loop continues** → User picks again, cycle repeats
+
+Note: no local GPU/torch/diffusers is involved anywhere in this flow —
+Groq and LTX-Video both run remotely.
 
 ---
 
@@ -107,7 +109,7 @@ curl -X POST http://localhost:8000/api/execute \
 
 ### Backend API Keys (in `backend/.env`, see `backend/.env.example`):
 - `GROQ_API_KEY`: For script + options generation
-- `HF_TOKEN`: For Wan 2.1 video generation
+- `HF_TOKEN`: For LTX-Video generation
 
 ### Frontend Backend URL (in `.env.local`):
 ```
@@ -118,10 +120,10 @@ BACKEND_URL=http://localhost:8000
 
 ## 📝 Notes
 
-- **Video Generation**: Uses Wan 2.1 via Hugging Face (cloud-based, may take 30-60 seconds)
+- **Video Generation**: Uses LTX-Video via Hugging Face (cloud-based, synchronous, ~10-20 seconds)
 - **Script Generation**: Uses Groq API (fast, ~2-5 seconds)
 - **State Management**: Backend saves state to `backend/state/game_state.json`
-- **Videos**: Saved to `backend/videos/` directory
+- **Videos**: Saved to `public/videos/` directory (served to the frontend)
 - **Scripts**: Saved to `backend/scenes/generated_script.json`
 
 ---
@@ -134,20 +136,20 @@ BACKEND_URL=http://localhost:8000
 - Check `backend/.env` exists and has `GROQ_API_KEY`/`HF_TOKEN` set (server
   raises a clear `RuntimeError` on startup if either is missing)
 
-### Scene images look inconsistent / generation is slow:
-- IP-Adapter runs on CPU if no CUDA GPU is available — this works but is slow
-  (a minute or more per image). A GPU speeds this up a lot.
-- Consistency depends on `ref_images/characters/CyberHero/CyberHero_1.png`
-  existing; if missing, scene images are skipped and video falls back to
-  text-to-video only (character consistency is not guaranteed in that case).
+### Video looks inconsistent / generation fails:
+- Character consistency depends on `ref_images/characters/CyberHero/CyberHero_1.png`
+  existing; if missing, the backend falls back to text-to-video only (no
+  consistency guarantee in that case).
+- If the LTX-Video Space call itself fails (asleep/unavailable), check
+  backend logs for the actual error from `_call_ltx` in `backend/server.py`.
 
 ### Frontend can't connect:
 - Ensure backend is running on port 8000
 - Check `.env.local` has `BACKEND_URL=http://localhost:8000`
 
 ### Video generation fails:
-- Check internet connection (Wan 2.1 is cloud-based)
-- Check Groq API keys are valid
+- Check internet connection (LTX-Video is cloud-based via Hugging Face)
+- Check `HF_TOKEN`/`GROQ_API_KEY` are valid
 - Check backend logs for errors
 
 ---

@@ -8,7 +8,7 @@ GROQ_KEY = os.environ.get("GROQ_API_KEY")
 if not GROQ_KEY:
     raise RuntimeError("GROQ_API_KEY environment variable is not set.")
 # Using a widely available stable model
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 # Initialize LLM client
 llm = ChatGroq(model=MODEL, temperature=0.7, groq_api_key=GROQ_KEY)

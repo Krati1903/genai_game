@@ -9,3 +9,7 @@ ComfyUI/temp/
 venv/
 __pycache__/
 .DS_Store
+
+# Local backend runtime artifacts (generated videos/scripts, not source)
+genai-dashboard/public/videos/
+genai-dashboard/backend/scenes/
