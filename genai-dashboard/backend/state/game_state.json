@@ -1,8 +1,65 @@
 {
-  "genesis_prompt": "a cyberpunk city where ai and humans coexist in a delicate balance",
-  "current_scene": 0,
-  "history": [],
-  "current_script": null,
-  "current_options": null,
+  "genesis_prompt": "Noir detective solving mysteries in a rain-soaked city",
+  "current_scene": 1,
+  "history": [
+    {
+      "scene_id": 1,
+      "timestamp": "2026-08-29T15:50:13.359946",
+      "choice": "Genesis",
+      "choice_label": "The story begins"
+    }
+  ],
+  "current_script": [
+    {
+      "scene_id": 1,
+      "description": "Rain pours over the neon‑lit alleys of the city as the lone detective steps out of a smoky bar, the first clues of a new mystery glinting in the puddles.",
+      "visual_prompt": "A gritty noir cityscape drenched in rain, neon signs flickering, wet cobblestones reflecting light, a trench‑coated detective with a fedora, holding a glowing dossier; include the word CyberHero in stylized graffiti on a wall, cinematic lighting, ultra‑realistic, 8K.",
+      "camera": "Low angle tracking shot following the detective from the wet sidewalk up to his face as he looks into the night.",
+      "action": "The detective lights a cigarette, scans the street, and receives a mysterious encrypted message projected onto a billboard."
+    },
+    {
+      "scene_id": 2,
+      "description": "The encrypted message points to two possible leads: a hidden speakeasy behind a cyber‑graffiti mural, or the abandoned docks where a smuggler's ship is docked.",
+      "visual_prompt": "Rain‑slick alleyway with a massive mural reading 'CyberHero' in glowing cyberpunk font; on the left, a dimly lit speakeasy entrance with a brass door, on the right, the foggy silhouette of rusted docks under a stormy sky, hyper‑detail, cinematic noir atmosphere.",
+      "camera": "Split‑screen wide shot: left side follows the detective toward the speakeasy, right side toward the docks, each with a slow dolly in.",
+      "action": "The detective pauses, weighing his options; the player must choose to investigate the speakeasy (Scene 3A) or head to the docks (Scene 3B)."
+    },
+    {
+      "scene_id": 3,
+      "description": "Depending on the chosen lead, the detective uncovers a secret meeting: either a covert syndicate exchanging data in the speakeasy, or a black‑market arms deal at the docks, both tying back to the elusive CyberHero mastermind.",
+      "visual_prompt": "Inside the speakeasy: low‑light jazz club with holographic tables, patrons exchanging data chips; outside the docks: rain‑soaked cargo crates, shadowy figures loading weapons, a distant neon sign reading 'CyberHero' flickering; ultra‑realistic, dramatic shadows, 4K.",
+      "camera": "Dynamic crane shot that rises from the detective's hand gripping a weapon to reveal the full scene of the clandestine meeting.",
+      "action": "The detective confronts the operatives, forcing a showdown that reveals a fragment of the CyberHero's true identity and sets the stage for the next chapter."
+    }
+  ],
+  "current_options": {
+    "scene_summary": "Detective follows the lead and bursts onto a hidden rendezvous: in the speakeasy, shadowy figures trade encrypted data, while at the docks, crates of illicit weaponry are being exchanged—both clues pointing to the elusive CyberHero mastermind.",
+    "options": [
+      {
+        "id": "A",
+        "label": "Storm the Deal",
+        "description": "Draw your weapon and confront the participants, demanding they surrender the evidence and reveal CyberHero's plans.",
+        "hint": "May trigger a firefight and alert other operatives, but could force a quick confession."
+      },
+      {
+        "id": "B",
+        "label": "Parley for Info",
+        "description": "Step forward, identify yourself as an ally, and negotiate a trade of protection for the data or weapons.",
+        "hint": "Could secure the intel without bloodshed, but risks being deceived or double‑crossed."
+      },
+      {
+        "id": "C",
+        "label": "Slip Into Shadows",
+        "description": "Blend into the crowd, silently observe, and attempt to pilfer a data chip or a shipment manifest before anyone notices.",
+        "hint": "Grants valuable evidence while staying hidden, but failure may alert the syndicate."
+      },
+      {
+        "id": "D",
+        "label": "Watch and Wait",
+        "description": "Take a concealed position, record the exchange, and let the meeting run its course to map out the network.",
+        "hint": "Provides a broader picture of the operation, though you miss immediate loot and risk losing the moment."
+      }
+    ]
+  },
   "current_video": null
 }

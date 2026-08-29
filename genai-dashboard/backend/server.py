@@ -206,12 +206,15 @@ def _call_ltx(prompt_text: str, image_path: Optional[Path] = None):
         input_video_filepath="",
         height_ui=512,
         width_ui=512,
-        duration_ui=2,
+        duration_ui=1,
         ui_frames_to_use=9,
         seed_ui=42,
         randomize_seed=True,
         ui_guidance_scale=1,
-        improve_texture_flag=True,
+        # The two-pass refine step roughly doubles ZeroGPU seconds per call;
+        # free-tier daily quota is small (~a few minutes), so skip it to leave
+        # quota for more scenes rather than a marginally sharper single one.
+        improve_texture_flag=False,
     )
     if image_path is not None:
         return ltx_client.predict(
@@ -247,11 +250,25 @@ def _extract_file_path(result) -> str:
     raise RuntimeError(f"No usable file path in LTX result: {result!r}")
 
 
-def generate_video_with_ltx(prompt_text: str) -> str:
+class VideoQuotaExceeded(Exception):
+    """Raised when Hugging Face's free ZeroGPU daily quota is used up."""
+
+
+def _is_quota_error(e: Exception) -> bool:
+    text = str(e).lower()
+    return "zerogpu" in text or "quota" in text
+
+
+def generate_video_with_ltx(prompt_text: str) -> Optional[str]:
     """
     Generate the scene video via LTX-Video, using the CyberHero reference image
     as the first frame (image-to-video) for character consistency. Falls back to
     text-to-video if the image call fails or the reference is missing.
+
+    Raises VideoQuotaExceeded if the free ZeroGPU quota is exhausted, so the
+    caller can let the story continue without a video instead of hard-failing
+    the whole turn (and so we don't burn a second doomed request retrying
+    text-to-video on the same exhausted quota).
     """
     print(f"🎬 Generating video for: {prompt_text}")
     result = None
@@ -259,10 +276,17 @@ def generate_video_with_ltx(prompt_text: str) -> str:
         try:
             result = _call_ltx(prompt_text, image_path=REFERENCE_CHARACTER_IMAGE)
         except Exception as e:
+            if _is_quota_error(e):
+                raise VideoQuotaExceeded(str(e)) from e
             print(f"⚠️ Image-to-video call failed ({e}), retrying as text-to-video.")
             result = None
     if result is None:
-        result = _call_ltx(prompt_text)
+        try:
+            result = _call_ltx(prompt_text)
+        except Exception as e:
+            if _is_quota_error(e):
+                raise VideoQuotaExceeded(str(e)) from e
+            raise
     result_path = _extract_file_path(result)
 
     # result_path is local file path from gradio_client; move into VIDEOS_DIR
@@ -340,11 +364,18 @@ def _run_story_step(state: Dict, user_prompt: str, choice: str, choice_label: st
     # Generate the scene video via LTX image-to-video (character-consistent:
     # the CyberHero reference image is the video's first frame)
     print("▶ story step: calling LTX video...", flush=True)
+    video_path = None
+    video_error = None
     try:
         video_path = generate_video_with_ltx(visual_prompt)
+        print("▶ story step: video done", flush=True)
+    except VideoQuotaExceeded as e:
+        # Hugging Face's free ZeroGPU quota resets daily - don't hard-fail the
+        # whole turn over it, let the story continue without this scene's video.
+        video_error = "Free video-generation quota exceeded for today. The story continues without video for this scene."
+        print(f"⚠️ {video_error} ({e})", flush=True)
     except Exception as e:
         raise HTTPException(500, f"Video generation failed: {e}")
-    print("▶ story step: video done", flush=True)
 
     # Generate next options from Groq (based on scene description)
     print("▶ story step: calling Groq for options...", flush=True)
@@ -366,7 +397,10 @@ def _run_story_step(state: Dict, user_prompt: str, choice: str, choice_label: st
     )
     state["current_script"] = script_scenes
     state["current_options"] = options
-    state["current_video"] = video_path
+    # Keep showing the previous scene's video rather than going blank if this
+    # scene's video generation failed (e.g. quota exceeded).
+    if video_path is not None:
+        state["current_video"] = video_path
     save_state(state)
 
     return {
@@ -374,7 +408,8 @@ def _run_story_step(state: Dict, user_prompt: str, choice: str, choice_label: st
         "scene_id": state["current_scene"],
         "script": script_scenes,
         "options": options,
-        "video_path": video_path,
+        "video_path": video_path if video_path is not None else state.get("current_video"),
+        "video_error": video_error,
     }
 
 @app.post("/api/genesis")

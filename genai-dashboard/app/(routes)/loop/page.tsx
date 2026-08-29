@@ -21,6 +21,7 @@ export default function LoopPage() {
   const [chronicle, setChronicle] = useState<ChronicleEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   // Hydrate from the state /api/genesis already generated (script + video + options).
   useEffect(() => {
@@ -48,6 +49,7 @@ export default function LoopPage() {
   const handleChoice = async (choice: string, customPrompt?: string) => {
     setLoading(true);
     setError(null);
+    setWarning(null);
 
     const chosenLabel =
       customPrompt || options.find((o) => o.id === choice)?.label || choice;
@@ -65,6 +67,7 @@ export default function LoopPage() {
       setVideoPath(data.video_path);
       setSceneId(data.scene_id);
       setOptions(data.options?.options || []);
+      if (data.video_error) setWarning(data.video_error);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to execute choice');
     } finally {
@@ -131,6 +134,21 @@ export default function LoopPage() {
             >
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Non-fatal warning (e.g. video quota exceeded - story still continues) */}
+        <AnimatePresence>
+          {warning && !error && (
+            <motion.div
+              className="absolute top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#FFB800]/95 text-black px-5 py-3 rounded-xl shadow-xl text-sm max-w-md font-medium"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {warning}
             </motion.div>
           )}
         </AnimatePresence>
