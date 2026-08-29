@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 import torch
 from diffusers import StableDiffusionPipeline
 from prompt_templates import character_prompt, environment_prompt
@@ -30,7 +31,7 @@ def generate_images(pipe, name, description, base_dir, count=20):
         print(f"✅ Saved image {i+1}/20 to {folder}")
 
 if __name__ == "__main__":
-    BASE_PATH = "/home/saurabhgaikwad/KRATI/genai_game_pipeline"
+    BASE_PATH = str(Path(__file__).resolve().parent.parent)
     
     # HARDCODED CHARACTER TO BYPASS PARSER ERRORS
     char_name = "CyberHero"

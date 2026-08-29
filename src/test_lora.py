@@ -1,20 +1,25 @@
 import torch
 from diffusers import StableDiffusionPipeline
 import os
+from pathlib import Path
 
 # 1. Define Paths
-model_path = "/home/saurabhgaikwad/.cache/huggingface/hub/models--runwayml--stable-diffusion-v1-5/snapshots/451f4fe16113bff5a5d2269ed5ad43b0592e9a14"
-lora_dir = "/home/saurabhgaikwad/KRATI/genai_game_pipeline/lora_train/model"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+# Set to the local HF cache snapshot dir for runwayml/stable-diffusion-v1-5,
+# or a local model directory/HF repo id.
+model_path = os.environ.get("SD_MODEL_PATH", "runwayml/stable-diffusion-v1-5")
+lora_dir = str(REPO_ROOT / "lora_train" / "model")
 lora_name = "CyberHero_LoRA.safetensors"
-output_path = "/home/saurabhgaikwad/KRATI/genai_game_pipeline/test_output.png"
+output_path = str(REPO_ROOT / "test_output.png")
 
 # 2. Create the 'pipe' object (This must come FIRST)
 print("🚀 Loading Base Model...")
 pipe = StableDiffusionPipeline.from_pretrained(
-    model_path, 
-    torch_dtype=torch.float16, 
+    model_path,
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     local_files_only=True
-).to("cuda")
+)
+pipe = pipe.to("cuda") if torch.cuda.is_available() else pipe
 
 # 3. Inject the LoRA (Now 'pipe' exists, so this will work)
 print(f"🔌 Injecting {lora_name}...")

@@ -1,5 +1,8 @@
 import json
 import urllib.request
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent
 
 def queue_prompt(prompt_struct):
     p = {"prompt": prompt_struct}
@@ -8,7 +11,7 @@ def queue_prompt(prompt_struct):
     return urllib.request.urlopen(req).read()
 
 # Load the API workflow
-with open("/home/saurabhgaikwad/KRATI/genai_game_pipeline/ComfyUI/workflow_api.json", "r") as f:
+with open(REPO_ROOT / "ComfyUI" / "workflow_api.json", "r") as f:
     workflow = json.load(f)
 
 # Update values based on your specific JSON IDs

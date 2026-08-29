@@ -1,10 +1,12 @@
 import json
 import requests
 import os
+from pathlib import Path
 
 # --- CONFIGURATION ---
-SCRIPT_JSON = "/home/saurabhgaikwad/KRATI/genai_game_pipeline/scenes/generated_script.json"
-WORKFLOW_JSON = "/home/saurabhgaikwad/KRATI/genai_game_pipeline/ComfyUI/workflow_api.json"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT_JSON = REPO_ROOT / "scenes" / "generated_script.json"
+WORKFLOW_JSON = REPO_ROOT / "ComfyUI" / "workflow_api.json"
 COMFY_API_URL = "http://127.0.0.1:8188/prompt"
 PROMPT_NODE_ID = "3"
 SAVE_NODE_ID = "10"

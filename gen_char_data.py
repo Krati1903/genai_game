@@ -1,6 +1,9 @@
 import json
 import urllib.request
 import time
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent
 
 def queue_prompt(prompt_struct):
     p = {"prompt": prompt_struct}
@@ -8,7 +11,7 @@ def queue_prompt(prompt_struct):
     req = urllib.request.Request("http://127.0.0.1:8188/prompt", data=data)
     return urllib.request.urlopen(req).read()
 
-with open("/home/saurabhgaikwad/KRATI/genai_game_pipeline/ComfyUI/workflow_api.json", "r") as f:
+with open(REPO_ROOT / "ComfyUI" / "workflow_api.json", "r") as f:
     workflow = json.load(f)
 
 # SETTINGS: Define your character here

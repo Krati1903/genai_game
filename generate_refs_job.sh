@@ -1,60 +1,14 @@
 #!/bin/bash
-# ----------------------------------------------------------------------
-# SLURM JOB SCRIPT: Generate Character and Environment Reference Images
-# ----------------------------------------------------------------------
+# Generate character/environment reference images locally.
+set -e
 
-# --- SLURM RESOURCE REQUESTS ---
-# Job Info
-#SBATCH --job-name=GenAI_Ref_Gen
-#SBATCH --output=slurm-%j.out
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Hardware Allocation (Confirmed by CDAC)
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=40G
-#SBATCH --time=00:30:00
-#SBATCH --partition=gpu
-##SBATCH --gres=gpu:1
-#SBATCH --gres=gpu:1g.10gb:1 
-
-# --- ENVIRONMENT SETUP ---
-
-# Load the CUDA module
-module load cuda/12.3
-
-# Activate your Conda environment
-source /home/saurabhgaikwad/genai_game/bin/activate
-
-#verify the python activated
-which python
-python --version
+# Require the Groq API key from the environment rather than embedding it.
+export GROQ_API_KEY="${GROQ_API_KEY:?set this in your environment}"
 
 echo "Job started on $(hostname) at $(date)"
-echo "User: $USER"
 
-# Set the Groq API key
-# !!! REPLACE THE TEXT INSIDE THE QUOTES WITH YOUR ACTUAL, SECRET GROQ API KEY !!!
-export GROQ_API_KEY="gsk_85ZknaRazut1Ydu0Dm5KWGdyb3FYgtsfWeqNFIpdQikoutZdQh56_"
+python "$REPO_ROOT/src/generate_refs.py"
 
-# Run the Python script
-python /home/saurabhgaikwad/KRATI/genai_game_pipeline/src/generate_refs.py
-
-echo "Job Completed at $(date)"
-
-## Navigate to your project directory
-## cd /home/saurabhgaikwad/KRATI/genai_game_pipeline
-
-#for deactivate
-deactivate
-
-
-
-
-
-
-
-
-
-
-
+echo "Job completed at $(date)"

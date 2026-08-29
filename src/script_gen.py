@@ -3,10 +3,12 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 # --- CONFIG ---
-# Direct string assignment is safer for your current setup
-GROQ_KEY = "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"
+# Groq key must be set in the environment (e.g. `export GROQ_API_KEY=...`).
+GROQ_KEY = os.environ.get("GROQ_API_KEY")
+if not GROQ_KEY:
+    raise RuntimeError("GROQ_API_KEY environment variable is not set.")
 # Using a widely available stable model
-MODEL = "llama-3.3-70b-versatile" 
+MODEL = "llama-3.3-70b-versatile"
 
 # Initialize LLM client
 llm = ChatGroq(model=MODEL, temperature=0.7, groq_api_key=GROQ_KEY)
