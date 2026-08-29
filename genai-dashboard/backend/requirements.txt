@@ -3,6 +3,7 @@ uvicorn[standard]>=0.24.0
 langchain-groq>=0.1.0
 gradio-client>=0.7.0
 pydantic>=2.0.0
+python-dotenv>=1.0.0
 
 # Character-consistent scene images (IP-Adapter, no LoRA training / ComfyUI needed)
 torch

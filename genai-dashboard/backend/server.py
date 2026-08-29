@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from gradio_client import Client
 
@@ -25,6 +26,9 @@ from gradio_client import Client
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 from generate_scene_image import generate_character_image  # noqa: E402
+
+# Load GROQ_API_KEY / HF_TOKEN from backend/.env if present (copy backend/.env.example).
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 # Hugging Face token must be set in the environment (e.g. via .env.local / shell export).
 # Never hardcode real tokens in source.

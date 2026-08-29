@@ -22,47 +22,13 @@ export function VideoPlayer({ videoPath, loading }: VideoPlayerProps) {
       return;
     }
 
-    const generateVideo = async () => {
-      try {
-        setError(null);
-        setVideoUrl(null);
-        setIsGenerating(true);
-
-        // Call FastAPI backend to generate video and return its URL
-        const response = await fetch(
-          `http://localhost:8000/generate-video?prompt=${encodeURIComponent(
-            videoPath,
-          )}`,
-          {
-            method: 'POST',
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || 'Failed to generate video');
-        }
-
-        // Backend returns something like { url: "/videos/latest_scene.mp4" }
-        const url =
-          data.url.startsWith('http://') || data.url.startsWith('https://')
-            ? data.url
-            : `http://localhost:8000${data.url}`;
-
-        setVideoUrl(url);
-        setVideoKey(prev => prev + 1);
-        setIsGenerating(false);
-      } catch (err) {
-        console.error('Error generating video:', err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to generate video',
-        );
-        setIsGenerating(false);
-      }
-    };
-
-    generateVideo();
+    // /api/execute already generated this video server-side; videoPath is the
+    // local file path the backend returned. Just proxy it through /api/get-video
+    // instead of re-triggering generation with the path treated as a prompt.
+    setError(null);
+    setIsGenerating(false);
+    setVideoUrl(`/api/get-video?path=${encodeURIComponent(videoPath)}`);
+    setVideoKey(prev => prev + 1);
   }, [videoPath]);
 
   if (!videoUrl && !loading && !isGenerating) {
