@@ -3,27 +3,18 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { BehavioralOption } from '@/lib/utils';
-import { Send, X, Sparkles } from 'lucide-react';
+import { Send, X, ChevronRight, Zap } from 'lucide-react';
 
 interface OptionOverlayProps {
   options: BehavioralOption[];
-  sceneSummary: string;
   onChoice: (choice: string, customPrompt?: string) => void;
 }
 
-export function OptionOverlay({ options, sceneSummary, onChoice }: OptionOverlayProps) {
+export function OptionOverlay({ options, onChoice }: OptionOverlayProps) {
   const [showCustom, setShowCustom] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
 
-  const handleOptionClick = (optionId: string) => {
-    if (optionId === 'Custom') {
-      setShowCustom(true);
-    } else {
-      onChoice(optionId);
-    }
-  };
-
-  const handleCustomSubmit = () => {
+  const submitCustom = () => {
     if (customPrompt.trim()) {
       onChoice('Custom', customPrompt);
       setShowCustom(false);
@@ -31,137 +22,100 @@ export function OptionOverlay({ options, sceneSummary, onChoice }: OptionOverlay
     }
   };
 
-  const getButtonColor = (id: string) => {
-    switch (id) {
-      case 'A': return 'from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700';
-      case 'B': return 'from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700';
-      case 'C': return 'from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700';
-      case 'D': return 'from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700';
-      default: return 'from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800';
-    }
-  };
-
   return (
-    <motion.div
-      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/80 to-transparent p-8 z-40"
-      initial={{ y: 100, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-    >
-      {/* Scene Summary */}
-      <AnimatePresence>
-        {sceneSummary && (
-          <motion.div
-            className="mb-6 text-center"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-          >
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-blue-400" />
-              <p className="text-white text-lg font-medium">{sceneSummary}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="absolute inset-x-0 bottom-0 z-40 px-6 sm:px-10 pb-5 pt-28 bg-gradient-to-t from-black via-black/85 to-transparent">
+      <div className="max-w-4xl mx-auto">
+        {/* Prompt header */}
+        <div className="flex items-center justify-center gap-3 mb-5">
+          <Zap className="w-3.5 h-3.5 text-[#FFB800]" fill="currentColor" />
+          <span className="font-[family-name:var(--font-mono)] text-[#FFB800] text-xs sm:text-sm tracking-[0.4em]">
+            WHAT DO YOU DO?
+          </span>
+          <Zap className="w-3.5 h-3.5 text-[#FFB800]" fill="currentColor" />
+        </div>
 
-      {/* Custom Prompt Input */}
-      <AnimatePresence>
-        {showCustom && (
-          <motion.div
-            className="mb-4 bg-black/60 backdrop-blur-lg rounded-xl p-4 border border-white/20 shadow-xl"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <textarea
-              value={customPrompt}
-              onChange={(e) => setCustomPrompt(e.target.value)}
-              placeholder="Describe your custom action..."
-              className="w-full px-4 py-3 bg-black/40 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-              rows={3}
-              autoFocus
-            />
-            <div className="flex gap-2 mt-3">
-              <motion.button
-                onClick={handleCustomSubmit}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Send className="w-4 h-4" />
-                Submit
-              </motion.button>
-              <motion.button
-                onClick={() => {
-                  setShowCustom(false);
-                  setCustomPrompt('');
-                }}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <X className="w-5 h-5" />
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Options Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-6xl mx-auto">
-        {options.map((option, index) => (
-          <motion.button
-            key={option.id}
-            onClick={() => handleOptionClick(option.id)}
-            className={`bg-gradient-to-br ${getButtonColor(option.id)} text-white p-6 rounded-xl shadow-lg text-left group relative overflow-hidden`}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1, duration: 0.3 }}
-            whileHover={{ scale: 1.05, zIndex: 10 }}
-            whileTap={{ scale: 0.95 }}
-          >
+        {/* Custom path */}
+        <AnimatePresence>
+          {showCustom && (
             <motion.div
-              className="absolute inset-0 bg-white/10"
-              initial={{ x: '-100%' }}
-              whileHover={{ x: '100%' }}
-              transition={{ duration: 0.5 }}
-            />
-            <div className="relative z-10">
-              <div className="text-2xl font-bold mb-2">{option.id}</div>
-              <div className="text-lg font-semibold mb-2">{option.label}</div>
-              <div className="text-sm opacity-90 mb-2">{option.description}</div>
-              <div className="text-xs opacity-75 italic">{option.consequences_hint || option.hint}</div>
-            </div>
-          </motion.button>
-        ))}
+              className="mb-4 bg-black/80 backdrop-blur-lg rounded-xl p-4 border border-[#FFB800]/30"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+            >
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitCustom();
+                  }
+                }}
+                placeholder="Describe your own action..."
+                className="w-full px-4 py-3 bg-black/50 border border-white/10 rounded-lg text-white placeholder-white/25 focus:outline-none focus:border-[#FFB800]/50 resize-none font-[family-name:var(--font-mono)] text-sm"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={submitCustom}
+                  className="flex-1 bg-gradient-to-r from-[#FFB800] to-[#FF8C00] text-black font-[family-name:var(--font-display)] font-black py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-xs tracking-[0.1em] hover:brightness-110 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  FORGE PATH
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCustom(false);
+                    setCustomPrompt('');
+                  }}
+                  className="px-4 py-2 text-white/40 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Custom Option Button */}
-        <motion.button
-          onClick={() => handleOptionClick('Custom')}
-          className="bg-gradient-to-br from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white p-6 rounded-xl shadow-lg text-left relative overflow-hidden"
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: options.length * 0.1, duration: 0.3 }}
-          whileHover={{ scale: 1.05, zIndex: 10 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <motion.div
-            className="absolute inset-0 bg-white/10"
-            initial={{ x: '-100%' }}
-            whileHover={{ x: '100%' }}
-            transition={{ duration: 0.5 }}
-          />
-          <div className="relative z-10">
-            <div className="text-2xl font-bold mb-2 flex items-center gap-2">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <div className="text-lg font-semibold mb-2">Custom</div>
-            <div className="text-sm opacity-90">Create your own path</div>
-          </div>
-        </motion.button>
+        {/* Options 2×2 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {options.map((option, index) => (
+            <motion.button
+              key={option.id}
+              onClick={() => onChoice(option.id)}
+              className="group relative flex items-center gap-4 px-4 py-4 rounded-xl bg-white/[0.05] border border-white/[0.09] hover:border-[#FFB800]/50 hover:bg-white/[0.09] transition-colors text-left"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.06, duration: 0.3 }}
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.985 }}
+              title={option.consequences_hint || option.hint}
+            >
+              <span className="flex-shrink-0 w-10 h-10 rounded-lg bg-[#FFB800]/15 border border-[#FFB800]/25 grid place-items-center font-[family-name:var(--font-display)] font-black text-[#FFB800] group-hover:bg-[#FFB800] group-hover:text-black transition-colors">
+                {index + 1}
+              </span>
+
+              <span className="flex-1 min-w-0 font-semibold text-[15px] text-white truncate">
+                {option.label}
+              </span>
+
+              <ChevronRight className="flex-shrink-0 w-5 h-5 text-white/25 group-hover:text-[#FFB800] group-hover:translate-x-0.5 transition-all" />
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Forge own path */}
+        {!showCustom && (
+          <button
+            onClick={() => setShowCustom(true)}
+            className="w-full mt-5 font-[family-name:var(--font-mono)] text-[10px] sm:text-[11px] tracking-[0.35em] text-white/25 hover:text-[#FFB800] transition-colors"
+          >
+            OR FORGE YOUR OWN PATH
+          </button>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 }

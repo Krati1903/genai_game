@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Film, Loader2, AlertCircle, Play } from 'lucide-react';
+import { Clapperboard, AlertCircle } from 'lucide-react';
 
 interface VideoPlayerProps {
   videoPath: string | null;
@@ -13,126 +13,100 @@ export function VideoPlayer({ videoPath, loading }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [videoKey, setVideoKey] = useState<number>(0);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [videoKey, setVideoKey] = useState(0);
 
   useEffect(() => {
     if (!videoPath) {
       setVideoUrl(null);
       return;
     }
-
-    // /api/execute already generated this video server-side; videoPath is the
-    // local file path the backend returned. Just proxy it through /api/get-video
-    // instead of re-triggering generation with the path treated as a prompt.
+    // The scene video was already generated server-side by /api/genesis or
+    // /api/execute; videoPath is the local file the backend returned, so just
+    // stream it through /api/get-video rather than re-triggering generation.
     setError(null);
-    setIsGenerating(false);
     setVideoUrl(`/api/get-video?path=${encodeURIComponent(videoPath)}`);
-    setVideoKey(prev => prev + 1);
+    setVideoKey((k) => k + 1);
   }, [videoPath]);
 
-  if (!videoUrl && !loading && !isGenerating) {
-    return (
-      <motion.div
-        className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-black"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <motion.div
-          className="text-center"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <motion.div
-            animate={{
-              scale: [1, 1.1, 1],
-              rotate: [0, 5, -5, 0],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-            }}
-          >
-            <Film className="w-20 h-20 text-blue-400 mx-auto mb-4" />
-          </motion.div>
-          <p className="text-white text-xl font-semibold mb-2">Your story begins...</p>
-          <p className="text-gray-400 text-sm">Make a choice to continue</p>
-        </motion.div>
-      </motion.div>
-    );
-  }
-
   return (
-    <div className="w-full h-full relative">
-      <AnimatePresence mode="wait">
-        {isGenerating || loading ? (
-          <motion.div
-            key="loading"
-            className="absolute inset-0 flex items-center justify-center bg-black/90 backdrop-blur-sm z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="text-center"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              >
-                <Loader2 className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-              </motion.div>
-              <p className="text-white text-xl font-semibold mb-2">Generating your scene...</p>
-              <p className="text-gray-400 text-sm">This may take a moment</p>
-            </motion.div>
-          </motion.div>
-        ) : videoUrl ? (
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Starfield fallback backdrop */}
+      <div className="absolute inset-0 bg-[#05050a]">
+        <div
+          className="absolute inset-0 bg-cover bg-center opacity-70"
+          style={{
+            backgroundImage: `url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1920&q=80')`,
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-transparent to-black/80" />
+      </div>
+
+      {/* Video */}
+      <AnimatePresence>
+        {videoUrl && !loading && (
           <motion.video
             key={videoKey}
             ref={videoRef}
             src={videoUrl}
             autoPlay
-            loop={false}
-            controls
-            className="w-full h-full object-contain"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.7 }}
             onError={() => setError('Failed to load video')}
-            onLoadedData={() => {
-              if (videoRef.current) {
-                videoRef.current.play().catch(console.error);
-              }
-            }}
+            onLoadedData={() => videoRef.current?.play().catch(() => {})}
           />
-        ) : null}
+        )}
       </AnimatePresence>
+
+      {/* Cinematic vignette so overlaid text stays readable */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/70 pointer-events-none" />
+
+      {/* Center play badge / generating state */}
+      <div className="absolute inset-0 grid place-items-center pointer-events-none">
+        <div className="flex flex-col items-center gap-5">
+          <motion.div
+            className="w-24 h-24 rounded-full bg-black/35 backdrop-blur-sm border border-white/15 grid place-items-center"
+            animate={loading ? { scale: [1, 1.06, 1] } : {}}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          >
+            {loading ? (
+              <span className="w-9 h-9 border-[3px] border-[#00F0FF]/25 border-t-[#00F0FF] rounded-full animate-spin" />
+            ) : (
+              <span className="w-0 h-0 border-y-[15px] border-y-transparent border-l-[24px] border-l-white/85 ml-2" />
+            )}
+          </motion.div>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px w-10 bg-gradient-to-r from-transparent to-white/25" />
+            <span className="flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] sm:text-[11px] text-white/45 tracking-[0.35em]">
+              <Clapperboard className="w-3.5 h-3.5" />
+              {loading ? 'GENERATING SCENE...' : 'AI VIDEO GENERATION'}
+            </span>
+            <span className="h-px w-10 bg-gradient-to-l from-transparent to-white/25" />
+          </div>
+        </div>
+      </div>
 
       <AnimatePresence>
         {error && (
           <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/90 backdrop-blur-sm z-50"
+            className="absolute inset-0 grid place-items-center bg-black/90 backdrop-blur-sm z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <motion.div
-              className="bg-red-500/20 border border-red-500/50 rounded-xl p-6 max-w-md mx-4"
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-            >
+            <div className="bg-red-500/15 border border-red-500/40 rounded-xl p-6 max-w-md mx-4">
               <div className="flex items-center gap-3 mb-2">
                 <AlertCircle className="w-6 h-6 text-red-400" />
                 <p className="text-red-300 font-semibold">Error</p>
               </div>
-              <p className="text-red-200">{error}</p>
-            </motion.div>
+              <p className="text-red-200 text-sm">{error}</p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

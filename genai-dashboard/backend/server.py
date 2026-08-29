@@ -314,9 +314,77 @@ async def generate_video(prompt: str):
 def root():
     return {"status": "ok", "message": "InfiniLife backend running"}
 
+def _run_story_step(state: Dict, user_prompt: str, choice: str, choice_label: str) -> Dict:
+    """
+    Shared step logic used by both /api/genesis (the opening scene) and
+    /api/execute (every scene after): Groq script -> LTX video -> Groq options,
+    then update + save state. Returns the response payload for the caller.
+    """
+    print(f"▶ story step: calling Groq for script... ({choice_label})", flush=True)
+    try:
+        script_scenes = generate_script_from_groq(user_prompt)
+    except Exception as e:
+        raise HTTPException(500, f"Script generation failed: {e}")
+    print("▶ story step: script done", flush=True)
+
+    # Save script to disk like your original script.py
+    SCENES_DIR.mkdir(exist_ok=True)
+    script_path = SCENES_DIR / "generated_script.json"
+    with open(script_path, "w", encoding="utf-8") as f:
+        json.dump(script_scenes, f, indent=2, ensure_ascii=False)
+
+    # Choose a scene (e.g. first or last) for video prompt
+    scene_for_video = script_scenes[-1]
+    visual_prompt = scene_for_video["visual_prompt"]
+
+    # Generate the scene video via LTX image-to-video (character-consistent:
+    # the CyberHero reference image is the video's first frame)
+    print("▶ story step: calling LTX video...", flush=True)
+    try:
+        video_path = generate_video_with_ltx(visual_prompt)
+    except Exception as e:
+        raise HTTPException(500, f"Video generation failed: {e}")
+    print("▶ story step: video done", flush=True)
+
+    # Generate next options from Groq (based on scene description)
+    print("▶ story step: calling Groq for options...", flush=True)
+    try:
+        options = generate_options_from_groq(scene_for_video["description"])
+    except Exception as e:
+        raise HTTPException(500, f"Options generation failed: {e}")
+    print("▶ story step: options done", flush=True)
+
+    # Update state
+    state["current_scene"] += 1
+    state["history"].append(
+        {
+            "scene_id": state["current_scene"],
+            "timestamp": datetime.now().isoformat(),
+            "choice": choice,
+            "choice_label": choice_label,
+        }
+    )
+    state["current_script"] = script_scenes
+    state["current_options"] = options
+    state["current_video"] = video_path
+    save_state(state)
+
+    return {
+        "success": True,
+        "scene_id": state["current_scene"],
+        "script": script_scenes,
+        "options": options,
+        "video_path": video_path,
+    }
+
 @app.post("/api/genesis")
 def api_genesis(body: GenesisRequest):
-    """Set the initial world / genesis prompt and generate first options."""
+    """
+    Set the initial world / genesis prompt and immediately generate the opening
+    scene (script + video + options), so /loop has something to show without
+    waiting on a first choice that has nothing to react to yet.
+    """
+    print("▶ /api/genesis: start", flush=True)
     state = load_state()
     state["genesis_prompt"] = body.prompt
     state["current_scene"] = 0
@@ -324,8 +392,12 @@ def api_genesis(body: GenesisRequest):
     state["current_script"] = None
     state["current_options"] = None
     state["current_video"] = None
-    save_state(state)
-    return {"success": True, "message": "Genesis set", "genesis_prompt": body.prompt}
+
+    user_prompt = f"World: {body.prompt}. Recent events: Beginning of story. Next action: Set the opening scene."
+    result = _run_story_step(state, user_prompt, choice="Genesis", choice_label="The story begins")
+    result["message"] = "Genesis set"
+    result["genesis_prompt"] = body.prompt
+    return result
 
 @app.post("/api/execute")
 def api_execute(body: ChoiceRequest):
@@ -342,7 +414,7 @@ def api_execute(body: ChoiceRequest):
     if not state["genesis_prompt"]:
         raise HTTPException(400, "Genesis prompt not set. Call /api/genesis first.")
 
-    # 1) Build high-level user_prompt for Groq based on genesis + history + choice
+    # Build high-level user_prompt for Groq based on genesis + history + choice
     history_text = " → ".join(
         f"Scene {h['scene_id']}: {h.get('choice_label','')}"
         for h in state["history"][-5:]
@@ -357,64 +429,7 @@ def api_execute(body: ChoiceRequest):
     if body.custom_prompt:
         user_prompt += f" Custom player instruction: {body.custom_prompt}"
 
-    # 2) Generate script scenes from Groq
-    print("▶ /api/execute: calling Groq for script...", flush=True)
-    try:
-        script_scenes = generate_script_from_groq(user_prompt)
-    except Exception as e:
-        raise HTTPException(500, f"Script generation failed: {e}")
-    print("▶ /api/execute: script done", flush=True)
-
-    # Save script to disk like your original script.py
-    SCENES_DIR.mkdir(exist_ok=True)
-    script_path = SCENES_DIR / "generated_script.json"
-    with open(script_path, "w", encoding="utf-8") as f:
-        json.dump(script_scenes, f, indent=2, ensure_ascii=False)
-
-    # 3) Choose a scene (e.g. first or last) for video prompt
-    scene_for_video = script_scenes[-1]
-    visual_prompt = scene_for_video["visual_prompt"]
-
-    # 4) Generate the scene video via LTX image-to-video (character-consistent:
-    #    the CyberHero reference image is the video's first frame)
-    print("▶ /api/execute: calling LTX video...", flush=True)
-    try:
-        video_path = generate_video_with_ltx(visual_prompt)
-    except Exception as e:
-        raise HTTPException(500, f"Video generation failed: {e}")
-    print("▶ /api/execute: video done", flush=True)
-
-    # 5) Generate next options from Groq (based on scene description)
-    print("▶ /api/execute: calling Groq for options...", flush=True)
-    try:
-        options = generate_options_from_groq(scene_for_video["description"])
-    except Exception as e:
-        raise HTTPException(500, f"Options generation failed: {e}")
-    print("▶ /api/execute: options done", flush=True)
-
-    # 6) Update state
-    state["current_scene"] += 1
-    state["history"].append(
-        {
-            "scene_id": state["current_scene"],
-            "timestamp": datetime.now().isoformat(),
-            "choice": body.choice,
-            "choice_label": choice_label,
-        }
-    )
-    state["current_script"] = script_scenes
-    state["current_options"] = options
-    state["current_video"] = video_path
-    save_state(state)
-
-    # Return everything frontend needs
-    return {
-        "success": True,
-        "scene_id": state["current_scene"],
-        "script": script_scenes,
-        "options": options,
-        "video_path": video_path,  # local path, use /api/video?path=...
-    }
+    return _run_story_step(state, user_prompt, choice=body.choice, choice_label=choice_label)
 
 @app.get("/api/options")
 def api_options():
