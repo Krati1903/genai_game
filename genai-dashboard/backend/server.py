@@ -6,6 +6,7 @@ InfiniLife: Nexus - Local Backend
 """
 
 import os
+import sys
 import json
 import shutil
 from datetime import datetime
@@ -19,6 +20,11 @@ from pydantic import BaseModel
 
 from langchain_groq import ChatGroq
 from gradio_client import Client
+
+# repo_root/src holds generate_scene_image.py (IP-Adapter character-consistent images)
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+from generate_scene_image import generate_character_image  # noqa: E402
 
 # Hugging Face token must be set in the environment (e.g. via .env.local / shell export).
 # Never hardcode real tokens in source.
@@ -34,10 +40,16 @@ STATE_DIR = BASE_DIR / "state"
 SCENES_DIR = BASE_DIR / "scenes"
 # Store generated videos directly in the frontend public/videos folder
 VIDEOS_DIR = BASE_DIR.parent / "public" / "videos"
+SCENE_IMAGES_DIR = STATE_DIR / "scene_images"
 
 STATE_DIR.mkdir(exist_ok=True)
 SCENES_DIR.mkdir(exist_ok=True)
 VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
+SCENE_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+# Reference image used by IP-Adapter to keep the main character visually consistent
+# across scenes (produced once by src/generate_refs.py, no training required).
+REFERENCE_CHARACTER_IMAGE = REPO_ROOT / "ref_images" / "characters" / "CyberHero" / "CyberHero_1.png"
 
 # Groq keys must be set in the environment (e.g. via .env.local / shell export).
 SCRIPT_GROQ_KEY = os.environ.get("GROQ_API_KEY")
@@ -171,14 +183,56 @@ def generate_options_from_groq(scene_description: str) -> Dict:
         print(f"❌ Options JSON parsing failed. Raw output: {text}")
         raise e
 
-def generate_video_with_wan(prompt_text: str) -> str:
-    """Call Wan 2.1 via Hugging Face to generate video; return local path."""
+def generate_scene_image(prompt_text: str, scene_id: int) -> Optional[Path]:
+    """
+    Generate a character-consistent scene image via IP-Adapter (no LoRA/ComfyUI needed).
+    Returns None (and lets the caller fall back to text-only video) if this fails —
+    e.g. no GPU, model not downloaded yet, or reference image missing.
+    """
+    if not REFERENCE_CHARACTER_IMAGE.exists():
+        print(f"⚠️ No reference character image at {REFERENCE_CHARACTER_IMAGE}, skipping image-conditioning.")
+        return None
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = SCENE_IMAGES_DIR / f"scene_{scene_id}_{ts}.png"
+    try:
+        return generate_character_image(
+            prompt=prompt_text,
+            reference_image_path=REFERENCE_CHARACTER_IMAGE,
+            output_path=output_path,
+        )
+    except Exception as e:
+        print(f"⚠️ Scene image generation failed, falling back to text-only video: {e}")
+        return None
+
+
+def generate_video_with_wan(prompt_text: str, scene_image_path: Optional[Path] = None) -> str:
+    """
+    Call Wan 2.1 via Hugging Face to generate video; return local path.
+    If scene_image_path is given, try image-to-video first (keeps the character from
+    the image); if the Space's /predict endpoint doesn't accept an image, fall back
+    to plain text-to-video so this never hard-fails.
+    """
     print(f"🎬 Generating video for: {prompt_text}")
-    result_path = wan_client.predict(
-        prompt=prompt_text,
-        negative_prompt="blurry, low quality",
-        api_name="/predict",
-    )
+    result_path = None
+    if scene_image_path is not None:
+        try:
+            result_path = wan_client.predict(
+                prompt=prompt_text,
+                negative_prompt="blurry, low quality",
+                image=str(scene_image_path),
+                api_name="/predict",
+            )
+        except Exception as e:
+            print(f"⚠️ Image-to-video call failed ({e}), retrying as text-to-video.")
+            result_path = None
+
+    if result_path is None:
+        result_path = wan_client.predict(
+            prompt=prompt_text,
+            negative_prompt="blurry, low quality",
+            api_name="/predict",
+        )
+
     # result_path is local file path from gradio_client; move into VIDEOS_DIR
     src = Path(result_path)
     if not src.exists():
@@ -213,12 +267,26 @@ async def generate_video(prompt: str):
     # Ensure videos directory exists
     VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Call the cloud API
-    result = wan_client.predict(
-        prompt=prompt,
-        negative_prompt="blurry, low quality",
-        api_name="/predict",
-    )
+    # Generate a character-consistent image first (IP-Adapter), then try image-to-video
+    scene_image_path = generate_scene_image(prompt, scene_id=0)
+    result = None
+    if scene_image_path is not None:
+        try:
+            result = wan_client.predict(
+                prompt=prompt,
+                negative_prompt="blurry, low quality",
+                image=str(scene_image_path),
+                api_name="/predict",
+            )
+        except Exception as e:
+            print(f"⚠️ Image-to-video call failed ({e}), retrying as text-to-video.")
+            result = None
+    if result is None:
+        result = wan_client.predict(
+            prompt=prompt,
+            negative_prompt="blurry, low quality",
+            api_name="/predict",
+        )
 
     # Move to frontend public/videos as a stable filename
     filename = "latest_scene.mp4"
@@ -291,9 +359,10 @@ def api_execute(body: ChoiceRequest):
     scene_for_video = script_scenes[-1]
     visual_prompt = scene_for_video["visual_prompt"]
 
-    # 4) Generate video via Wan 2.1
+    # 4) Generate a character-consistent scene image (IP-Adapter), then the video via Wan 2.1
+    scene_image_path = generate_scene_image(visual_prompt, state["current_scene"] + 1)
     try:
-        video_path = generate_video_with_wan(visual_prompt)
+        video_path = generate_video_with_wan(visual_prompt, scene_image_path)
     except Exception as e:
         raise HTTPException(500, f"Video generation failed: {e}")
 
